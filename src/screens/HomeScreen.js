@@ -8,30 +8,37 @@ import {
   RefreshControl,
   Alert
 } from 'react-native';
-import { COLORS, SPACING, SHADOWS, BORDER_RADIUS, APP_THEME } from '../utils/theme';
-import { TaskCard, TimePeriodHeader, CheckinSuccessToast } from '../components/TaskCard';
-import { PointsCard, Mascot } from '../components/CommonComponents';
-import { getTodayTasks, checkin } from '../services/api';
+import { COLORS, SPACING, SHADOWS, BORDER_RADIUS, APP_THEME, TASK_CATEGORIES } from '../utils/theme';
+import { TaskCard, TimePeriodHeader, CheckinSuccessToast, CategoryHeader } from '../components/TaskCard';
+import { PointsCard, Mascot, StreakBadge } from '../components/CommonComponents';
+import { getTodayTasks, checkin, getTaskStats } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function HomeScreen({ navigation }) {
   const { user, updateUser } = useAuth();
-  const [tasks, setTasks] = useState({ morning: [], noon: [], evening: [] });
+  const [tasks, setTasks] = useState({ daily: [], advanced: [], growth: [] });
   const [currentPeriod, setCurrentPeriod] = useState('morning');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState({ visible: false, taskName: '', points: 0 });
+  const [stats, setStats] = useState({
+    checkin_streak: 0,
+    max_checkin_streak: 0,
+    total_checkin_days: 0
+  });
+  const [isWeekend, setIsWeekend] = useState(false);
 
   // 获取今日任务
   const fetchTasks = async () => {
     try {
       const response = await getTodayTasks();
       setTasks({
-        morning: response.data.morning || [],
-        noon: response.data.noon || [],
-        evening: response.data.evening || []
+        daily: response.data.daily || [],
+        advanced: response.data.advanced || [],
+        growth: response.data.growth || []
       });
       setCurrentPeriod(response.data.currentPeriod || 'morning');
+      setIsWeekend(response.data.isWeekend || false);
     } catch (error) {
       console.error('获取任务失败:', error);
     } finally {
@@ -40,14 +47,26 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
+  // 获取统计数据
+  const fetchStats = async () => {
+    try {
+      const response = await getTaskStats();
+      setStats(response.data || {});
+    } catch (error) {
+      console.error('获取统计失败:', error);
+    }
+  };
+
   useEffect(() => {
     fetchTasks();
+    fetchStats();
   }, []);
 
   // 下拉刷新
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchTasks();
+    fetchStats();
   }, []);
 
   // 打卡
@@ -57,16 +76,27 @@ export default function HomeScreen({ navigation }) {
       
       // 显示成功提示
       const totalPoints = task.base_points + (task.extra_points || 0);
-      setToast({ visible: true, taskName: task.name, points: totalPoints });
+      const bonusPoints = response.data.streak_bonus || 0;
+      setToast({ 
+        visible: true, 
+        taskName: task.name, 
+        points: totalPoints + bonusPoints,
+        streakBonus: bonusPoints
+      });
       
       // 隐藏提示
       setTimeout(() => {
         setToast(prev => ({ ...prev, visible: false }));
-      }, 2000);
+      }, 2500);
       
       // 更新用户积分
       if (response.data.total_points !== undefined) {
         updateUser({ ...user, points: response.data.total_points });
+      }
+      
+      // 更新统计数据
+      if (response.data.checkin_streak !== undefined) {
+        setStats(prev => ({ ...prev, checkin_streak: response.data.checkin_streak }));
       }
       
       // 刷新任务列表
@@ -77,7 +107,7 @@ export default function HomeScreen({ navigation }) {
   };
 
   // 计算今日总进度
-  const allTasks = [...tasks.morning, ...tasks.noon, ...tasks.evening];
+  const allTasks = [...tasks.daily, ...tasks.advanced, ...tasks.growth];
   const completedCount = allTasks.filter(t => t.status === 'completed').length;
   const totalCount = allTasks.length;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
@@ -113,12 +143,20 @@ export default function HomeScreen({ navigation }) {
           <Mascot size="small" />
         </View>
 
-        {/* 积分卡片 */}
-        <PointsCard 
-          points={user?.points || 0}
-          totalPoints={user?.total_points || 0}
-          onPress={() => navigation.navigate('Points')}
-        />
+        {/* 积分和连续打卡卡片 */}
+        <View style={styles.statsRow}>
+          <PointsCard 
+            points={user?.points || 0}
+            totalPoints={user?.total_points || 0}
+            onPress={() => navigation.navigate('Points')}
+            compact
+          />
+          <StreakBadge 
+            streak={stats.checkin_streak}
+            maxStreak={stats.max_checkin_streak}
+            onPress={() => navigation.navigate('Rewards')}
+          />
+        </View>
 
         {/* 进度条 */}
         <View style={styles.progressContainer}>
@@ -134,65 +172,86 @@ export default function HomeScreen({ navigation }) {
 
         {/* 任务列表 */}
         <View style={styles.tasksSection}>
-          <Text style={styles.sectionTitle}>📋 今日任务</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>📋 今日任务</Text>
+            {isWeekend && (
+              <View style={styles.weekendBadge}>
+                <Text style={styles.weekendBadgeText}>🎉 周末挑战</Text>
+              </View>
+            )}
+          </View>
           
-          {/* 早上任务 */}
-          {tasks.morning.length > 0 && (
-            <View style={styles.periodSection}>
-              <TimePeriodHeader 
-                period="morning" 
-                tasks={tasks.morning}
-                currentPeriod={currentPeriod}
+          {/* 每日基础任务 */}
+          {tasks.daily.length > 0 && (
+            <View style={styles.categorySection}>
+              <CategoryHeader 
+                category="daily" 
+                completed={tasks.daily.filter(t => t.status === 'completed').length}
+                total={tasks.daily.length}
               />
-              {tasks.morning.map(task => (
+              {tasks.daily.map(task => (
                 <TaskCard
                   key={task._id}
                   task={task}
                   onCheckin={handleCheckin}
-                  timePeriod="morning"
+                  timePeriod={task.time_period}
+                  showCategory
                 />
               ))}
             </View>
           )}
 
-          {/* 中午任务 */}
-          {tasks.noon.length > 0 && (
-            <View style={styles.periodSection}>
-              <TimePeriodHeader 
-                period="noon" 
-                tasks={tasks.noon}
-                currentPeriod={currentPeriod}
+          {/* 进阶家务任务（周末显示） */}
+          {tasks.advanced.length > 0 && (
+            <View style={styles.categorySection}>
+              <CategoryHeader 
+                category="advanced" 
+                completed={tasks.advanced.filter(t => t.status === 'completed').length}
+                total={tasks.advanced.length}
               />
-              {tasks.noon.map(task => (
+              {tasks.advanced.map(task => (
                 <TaskCard
                   key={task._id}
                   task={task}
                   onCheckin={handleCheckin}
-                  timePeriod="noon"
+                  timePeriod="weekend"
+                  showCategory
                 />
               ))}
             </View>
           )}
 
-          {/* 晚上任务 */}
-          {tasks.evening.length > 0 && (
-            <View style={styles.periodSection}>
-              <TimePeriodHeader 
-                period="evening" 
-                tasks={tasks.evening}
-                currentPeriod={currentPeriod}
+          {/* 成长责任任务 */}
+          {tasks.growth.length > 0 && (
+            <View style={styles.categorySection}>
+              <CategoryHeader 
+                category="growth" 
+                completed={tasks.growth.filter(t => t.status === 'completed').length}
+                total={tasks.growth.length}
               />
-              {tasks.evening.map(task => (
+              {tasks.growth.map(task => (
                 <TaskCard
                   key={task._id}
                   task={task}
                   onCheckin={handleCheckin}
-                  timePeriod="evening"
+                  timePeriod="anytime"
+                  showCategory
                 />
               ))}
             </View>
           )}
         </View>
+
+        {/* 连续打卡奖励提示 */}
+        {(stats.checkin_streak === 7 || stats.checkin_streak === 30) && (
+          <View style={styles.streakRewardBanner}>
+            <Text style={styles.streakRewardIcon}>🎊</Text>
+            <View style={styles.streakRewardText}>
+              <Text style={styles.streakRewardTitle}>恭喜连续打卡{stats.checkin_streak}天！</Text>
+              <Text style={styles.streakRewardSubtitle}>获得 +{stats.checkin_streak === 7 ? 10 : 50} 积分奖励！</Text>
+            </View>
+          </View>
+        )}
 
         {/* 底部留白 */}
         <View style={styles.bottomSpacer} />
@@ -203,6 +262,7 @@ export default function HomeScreen({ navigation }) {
         visible={toast.visible}
         taskName={toast.taskName}
         points={toast.points}
+        streakBonus={toast.streakBonus}
       />
     </SafeAreaView>
   );
@@ -236,11 +296,16 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 4,
   },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.lg,
+  },
   progressContainer: {
     backgroundColor: COLORS.card,
     borderRadius: BORDER_RADIUS.medium,
     padding: SPACING.lg,
-    marginVertical: SPACING.lg,
+    marginBottom: SPACING.lg,
     ...SHADOWS.small,
   },
   progressHeader: {
@@ -279,14 +344,57 @@ const styles = StyleSheet.create({
   tasksSection: {
     marginTop: SPACING.sm,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: COLORS.textPrimary,
-    marginBottom: SPACING.md,
   },
-  periodSection: {
-    marginBottom: SPACING.md,
+  weekendBadge: {
+    backgroundColor: COLORS.accentGreen,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.round,
+  },
+  weekendBadgeText: {
+    color: COLORS.textWhite,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  categorySection: {
+    marginBottom: SPACING.lg,
+  },
+  streakRewardBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF9E6',
+    borderRadius: BORDER_RADIUS.medium,
+    padding: SPACING.lg,
+    marginTop: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.accent,
+  },
+  streakRewardIcon: {
+    fontSize: 32,
+    marginRight: SPACING.md,
+  },
+  streakRewardText: {
+    flex: 1,
+  },
+  streakRewardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  streakRewardSubtitle: {
+    fontSize: 14,
+    color: COLORS.accentOrange,
+    marginTop: 2,
   },
   bottomSpacer: {
     height: 100,

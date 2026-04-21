@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   Alert
 } from 'react-native';
-import { COLORS, SPACING, SHADOWS, BORDER_RADIUS } from '../utils/theme';
+import { COLORS, SPACING, SHADOWS, BORDER_RADIUS, TASK_CATEGORIES } from '../utils/theme';
 import { EmptyState, LoadingState, UserAvatar } from '../components/CommonComponents';
 import { CartoonButton } from '../components/CartoonButton';
 import { getCustomTasks, acceptCustomTask, completeCustomTask } from '../services/api';
@@ -19,6 +19,7 @@ export default function TaskListScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
+  const [activeTab, setActiveTab] = useState('custom'); // custom-自定义任务, advanced-进阶任务
 
   // 获取任务列表
   const fetchTasks = async () => {
@@ -131,6 +132,28 @@ export default function TaskListScreen({ navigation }) {
     </View>
   );
 
+  // Tab切换
+  const renderTabs = () => (
+    <View style={styles.tabContainer}>
+      <TouchableOpacity
+        style={[styles.tab, activeTab === 'custom' && styles.tabActive]}
+        onPress={() => setActiveTab('custom')}
+      >
+        <Text style={[styles.tabText, activeTab === 'custom' && styles.tabTextActive]}>
+          📋 自定义任务
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.tab, activeTab === 'help' && styles.tabActive]}
+        onPress={() => setActiveTab('help')}
+      >
+        <Text style={[styles.tabText, activeTab === 'help' && styles.tabTextActive]}>
+          🤝 互助大厅
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -164,6 +187,7 @@ export default function TaskListScreen({ navigation }) {
             <Text style={styles.headerSubtitle}>
               帮助别人完成任务，赚取积分奖励！
             </Text>
+            {renderTabs()}
           </View>
         }
       />
@@ -193,6 +217,31 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 14,
     color: COLORS.textSecondary,
+    marginBottom: SPACING.lg,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.card,
+    borderRadius: BORDER_RADIUS.medium,
+    padding: SPACING.xs,
+    ...SHADOWS.small,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: SPACING.md,
+    alignItems: 'center',
+    borderRadius: BORDER_RADIUS.small,
+  },
+  tabActive: {
+    backgroundColor: COLORS.primary,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  tabTextActive: {
+    color: COLORS.textWhite,
   },
   taskCard: {
     backgroundColor: COLORS.card,

@@ -13,6 +13,7 @@ import TaskListScreen from './screens/TaskListScreen';
 import CustomTaskScreen from './screens/CustomTaskScreen';
 import PointsHistoryScreen from './screens/PointsHistoryScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import RewardsScreen from './screens/RewardsScreen';
 import { LoadingState } from './components/CommonComponents';
 
 const Stack = createNativeStackNavigator();
@@ -55,11 +56,11 @@ function HomeTabs() {
         }}
       />
       <Tab.Screen
-        name="CustomTask"
-        component={CustomTaskScreen}
+        name="Rewards"
+        component={RewardsScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="➕" focused={focused} label="发布" />
+            <TabIcon icon="🎁" focused={focused} label="商城" />
           ),
         }}
       />
@@ -100,6 +101,16 @@ export default function AppNavigator() {
               options={{
                 headerShown: true,
                 title: '积分明细',
+                headerStyle: { backgroundColor: COLORS.primary },
+                headerTintColor: COLORS.textWhite,
+              }}
+            />
+            <Stack.Screen 
+              name="CustomTask" 
+              component={CustomTaskScreen}
+              options={{
+                headerShown: true,
+                title: '发布任务',
                 headerStyle: { backgroundColor: COLORS.primary },
                 headerTintColor: COLORS.textWhite,
               }}

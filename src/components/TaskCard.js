@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { COLORS, SHADOWS, BORDER_RADIUS, SPACING, TASK_ICONS, TIME_PERIODS } from '../utils/theme';
+import { COLORS, SHADOWS, BORDER_RADIUS, SPACING, TASK_ICONS, TIME_PERIODS, TASK_CATEGORIES } from '../utils/theme';
 
 // 任务卡片组件 - 卡通风格
-export const TaskCard = ({ task, onCheckin, timePeriod, showAnimation = false }) => {
+export const TaskCard = ({ task, onCheckin, timePeriod, showAnimation = false, showCategory = false }) => {
   const isCompleted = task.status === 'completed';
-  const iconInfo = TASK_ICONS[task.icon] || { emoji: '📝', color: '#F5F5F5' };
+  const iconInfo = TASK_ICONS[task.icon] || TASK_ICONS.default;
   
   // 计算总积分
   const totalPoints = task.base_points + (task.extra_points || 0);
@@ -25,9 +25,18 @@ export const TaskCard = ({ task, onCheckin, timePeriod, showAnimation = false })
       
       {/* 中间内容区域 */}
       <View style={styles.content}>
-        <Text style={[styles.taskName, isCompleted && styles.taskNameCompleted]}>
-          {task.name}
-        </Text>
+        <View style={styles.titleRow}>
+          <Text style={[styles.taskName, isCompleted && styles.taskNameCompleted]}>
+            {task.name}
+          </Text>
+          {showCategory && task.category && (
+            <View style={[styles.categoryBadge, { backgroundColor: COLORS.categoryColors[task.category] + '20' }]}>
+              <Text style={[styles.categoryBadgeText, { color: COLORS.categoryColors[task.category] }]}>
+                {TASK_CATEGORIES[task.category]?.label || task.category}
+              </Text>
+            </View>
+          )}
+        </View>
         <View style={styles.pointsContainer}>
           <View style={styles.pointsBadge}>
             <Text style={styles.pointsIcon}>⭐</Text>
@@ -66,7 +75,7 @@ export const TaskCard = ({ task, onCheckin, timePeriod, showAnimation = false })
 
 // 时间段头部组件
 export const TimePeriodHeader = ({ period, tasks, currentPeriod }) => {
-  const info = TIME_PERIODS[period];
+  const info = TIME_PERIODS[period] || TIME_PERIODS.morning;
   const isActive = period === currentPeriod;
   const completedCount = tasks.filter(t => t.status === 'completed').length;
   const totalCount = tasks.length;
@@ -104,8 +113,42 @@ export const TimePeriodHeader = ({ period, tasks, currentPeriod }) => {
   );
 };
 
+// 任务类别头部组件
+export const CategoryHeader = ({ category, completed = 0, total = 0 }) => {
+  const info = TASK_CATEGORIES[category] || TASK_CATEGORIES.daily;
+  const allCompleted = completed === total && total > 0;
+  
+  return (
+    <View style={[styles.categoryHeaderContainer, { borderLeftColor: info.color }]}>
+      <View style={styles.categoryHeaderLeft}>
+        <Text style={styles.categoryHeaderIcon}>{info.icon}</Text>
+        <View>
+          <Text style={[styles.categoryHeaderText, { color: info.color }]}>
+            {info.label}
+          </Text>
+          <Text style={styles.categoryHeaderSubText}>{info.description}</Text>
+        </View>
+      </View>
+      
+      <View style={styles.categoryHeaderRight}>
+        {allCompleted ? (
+          <View style={[styles.allCompletedBadge, { backgroundColor: info.color }]}>
+            <Text style={styles.allCompletedText}>全部完成 🎉</Text>
+          </View>
+        ) : (
+          <View style={[styles.categoryProgressBadge, { backgroundColor: info.color + '20' }]}>
+            <Text style={[styles.categoryProgressText, { color: info.color }]}>
+              {completed}/{total}
+            </Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+};
+
 // 打卡成功动画提示
-export const CheckinSuccessToast = ({ visible, taskName, points }) => {
+export const CheckinSuccessToast = ({ visible, taskName, points, streakBonus = 0 }) => {
   if (!visible) return null;
   
   return (
@@ -114,6 +157,9 @@ export const CheckinSuccessToast = ({ visible, taskName, points }) => {
       <View style={styles.toastContent}>
         <Text style={styles.toastTitle}>打卡成功！</Text>
         <Text style={styles.toastText}>{taskName} +{points}积分</Text>
+        {streakBonus > 0 && (
+          <Text style={styles.toastStreakBonus}>+{streakBonus}连续打卡奖励</Text>
+        )}
       </View>
     </View>
   );
@@ -166,6 +212,11 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
   taskName: {
     fontSize: 17,
     fontWeight: '600',
@@ -175,6 +226,16 @@ const styles = StyleSheet.create({
   taskNameCompleted: {
     textDecorationLine: 'line-through',
     color: COLORS.textLight,
+  },
+  categoryBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.small,
+    marginLeft: SPACING.sm,
+  },
+  categoryBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
   },
   pointsContainer: {
     flexDirection: 'row',
@@ -297,34 +358,77 @@ const styles = StyleSheet.create({
   allCompletedText: {
     color: COLORS.textWhite,
     fontWeight: '600',
-    fontSize: 13,
+    fontSize: 12,
   },
   currentBadge: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.warning,
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: BORDER_RADIUS.round,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.small,
     marginLeft: SPACING.sm,
   },
   currentBadgeText: {
     color: COLORS.textWhite,
-    fontSize: 11,
     fontWeight: '600',
+    fontSize: 11,
   },
-  
+
+  // Category header styles
+  categoryHeaderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    marginBottom: SPACING.md,
+    backgroundColor: COLORS.card,
+    borderRadius: BORDER_RADIUS.medium,
+    borderLeftWidth: 4,
+    ...SHADOWS.small,
+  },
+  categoryHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  categoryHeaderIcon: {
+    fontSize: 24,
+    marginRight: SPACING.md,
+  },
+  categoryHeaderText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  categoryHeaderSubText: {
+    fontSize: 12,
+    color: COLORS.textLight,
+    marginTop: 1,
+  },
+  categoryHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  categoryProgressBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.round,
+  },
+  categoryProgressText: {
+    fontWeight: '600',
+    fontSize: 13,
+  },
+
   // Toast styles
   toast: {
     position: 'absolute',
-    top: 100,
+    bottom: 100,
     left: 20,
     right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.success,
     borderRadius: BORDER_RADIUS.large,
     padding: SPACING.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
     ...SHADOWS.large,
-    zIndex: 1000,
   },
   toastIcon: {
     fontSize: 32,
@@ -334,13 +438,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   toastTitle: {
-    color: COLORS.textWhite,
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
+    color: COLORS.textWhite,
   },
   toastText: {
-    color: COLORS.textWhite,
     fontSize: 14,
-    opacity: 0.9,
+    color: COLORS.textWhite,
+    marginTop: 2,
+  },
+  toastStreakBonus: {
+    fontSize: 12,
+    color: '#FFE082',
+    marginTop: 2,
   },
 });

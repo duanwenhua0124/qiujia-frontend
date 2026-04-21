@@ -13,7 +13,22 @@ export const PointsBadge = ({ points, size = 'medium', showIcon = true }) => {
 };
 
 // 积分展示卡片（用于首页）
-export const PointsCard = ({ points, totalPoints, onPress }) => {
+export const PointsCard = ({ points, totalPoints, onPress, compact = false }) => {
+  if (compact) {
+    return (
+      <TouchableOpacity style={styles.pointsCardCompact} onPress={onPress} activeOpacity={0.8}>
+        <View style={styles.pointsCardCompactLeft}>
+          <Text style={styles.pointsCardCompactIcon}>⭐</Text>
+          <View>
+            <Text style={styles.pointsCardCompactValue}>{points}</Text>
+            <Text style={styles.pointsCardCompactLabel}>当前积分</Text>
+          </View>
+        </View>
+        <Text style={styles.pointsCardCompactArrow}>→</Text>
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <TouchableOpacity style={styles.pointsCard} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.pointsCardHeader}>
@@ -31,6 +46,39 @@ export const PointsCard = ({ points, totalPoints, onPress }) => {
         </View>
         <Text style={styles.pointsCardArrow}>→</Text>
       </View>
+    </TouchableOpacity>
+  );
+};
+
+// 连续打卡徽章
+export const StreakBadge = ({ streak = 0, maxStreak = 0, onPress }) => {
+  const getStreakColor = () => {
+    if (streak >= 30) return '#FFD700';
+    if (streak >= 7) return '#FF9800';
+    if (streak >= 3) return '#4CAF50';
+    return COLORS.primary;
+  };
+
+  const getStreakIcon = () => {
+    if (streak >= 30) return '🔥';
+    if (streak >= 7) return '💪';
+    if (streak >= 3) return '✨';
+    return '📅';
+  };
+
+  return (
+    <TouchableOpacity style={[styles.streakBadge, { backgroundColor: getStreakColor() }]} onPress={onPress} activeOpacity={0.8}>
+      <Text style={styles.streakIcon}>{getStreakIcon()}</Text>
+      <View style={styles.streakContent}>
+        <Text style={styles.streakValue}>{streak}</Text>
+        <Text style={styles.streakLabel}>连续打卡</Text>
+      </View>
+      {maxStreak > 0 && (
+        <View style={styles.streakMaxContainer}>
+          <Text style={styles.streakMaxLabel}>最高</Text>
+          <Text style={styles.streakMaxValue}>{maxStreak}</Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 };
@@ -166,9 +214,11 @@ const styles = StyleSheet.create({
   
   // PointsCard styles
   pointsCard: {
+    flex: 1,
     backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.large,
     padding: SPACING.xl,
+    marginRight: SPACING.md,
     ...SHADOWS.medium,
   },
   pointsCardHeader: {
@@ -227,6 +277,85 @@ const styles = StyleSheet.create({
     color: COLORS.textWhite,
     fontSize: 18,
     opacity: 0.8,
+  },
+  
+  // PointsCard compact styles
+  pointsCardCompact: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.large,
+    padding: SPACING.lg,
+    marginRight: SPACING.md,
+    ...SHADOWS.small,
+  },
+  pointsCardCompactLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pointsCardCompactIcon: {
+    fontSize: 28,
+    marginRight: SPACING.md,
+  },
+  pointsCardCompactValue: {
+    color: COLORS.textWhite,
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  pointsCardCompactLabel: {
+    color: COLORS.textWhite,
+    fontSize: 12,
+    opacity: 0.8,
+  },
+  pointsCardCompactArrow: {
+    color: COLORS.textWhite,
+    fontSize: 20,
+    opacity: 0.8,
+  },
+  
+  // StreakBadge styles
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: BORDER_RADIUS.large,
+    padding: SPACING.lg,
+    ...SHADOWS.small,
+  },
+  streakIcon: {
+    fontSize: 28,
+    marginRight: SPACING.sm,
+  },
+  streakContent: {
+    alignItems: 'center',
+  },
+  streakValue: {
+    color: COLORS.textWhite,
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  streakLabel: {
+    color: COLORS.textWhite,
+    fontSize: 11,
+    opacity: 0.9,
+  },
+  streakMaxContainer: {
+    marginLeft: SPACING.md,
+    paddingLeft: SPACING.md,
+    borderLeftWidth: 1,
+    borderLeftColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center',
+  },
+  streakMaxLabel: {
+    color: COLORS.textWhite,
+    fontSize: 10,
+    opacity: 0.8,
+  },
+  streakMaxValue: {
+    color: COLORS.textWhite,
+    fontSize: 14,
+    fontWeight: '700',
   },
   
   // UserAvatar styles
@@ -347,6 +476,5 @@ const styles = StyleSheet.create({
   mascotBubbleText: {
     fontSize: 14,
     color: COLORS.textPrimary,
-    textAlign: 'center',
   },
 });

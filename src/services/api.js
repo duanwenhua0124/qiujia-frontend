@@ -65,7 +65,33 @@ export const updateAvatar = (avatar) => api.post('/user/avatar', { avatar });
 export const getTodayTasks = () => api.get('/tasks/today');
 
 // 任务打卡
-export const checkin = (taskId) => api.post('/tasks/checkin', { task_id: taskId });
+export const checkin = (taskId, isMakeup = false) => 
+  api.post('/tasks/checkin', { task_id: taskId, is_makeup: isMakeup });
+
+// 获取任务统计
+export const getTaskStats = () => api.get('/tasks/stats');
+
+// 获取所有任务（管理员）
+export const getAllTasks = () => api.get('/tasks/all');
+
+// 创建/更新任务（管理员）
+export const createTasks = (tasks) => api.post('/tasks/admin/create', { tasks });
+
+// ============ 奖励商城相关 ============
+
+// 获取奖励列表
+export const getRewardsList = (category) => 
+  api.get('/rewards/list', { params: { category } });
+
+// 兑换奖励
+export const redeemReward = (rewardId, note = '') => 
+  api.post('/rewards/redeem', { reward_id: rewardId, note });
+
+// 获取兑换记录
+export const getRewardHistory = (params) => 
+  api.get('/rewards/history', { params });
+
+// ============ 自定义任务 ============
 
 // 创建自定义任务
 export const createCustomTask = (data) => api.post('/tasks/custom', data);
@@ -98,5 +124,17 @@ export const getAdminUserDetail = (userId) => api.get(`/admin/users/${userId}`);
 // 调整用户积分
 export const adjustUserPoints = (userId, amount, reason) => 
   api.post(`/admin/users/${userId}/adjust-points`, { amount, reason });
+
+// 获取待审核兑换申请
+export const getPendingRedemptions = (status) => 
+  api.get('/rewards/admin/pending', { params: { status } });
+
+// 审核兑换申请
+export const reviewRedemption = (redemptionId, action, rejectReason) => 
+  api.post('/rewards/admin/review', { 
+    redemption_id: redemptionId, 
+    action,
+    reject_reason: rejectReason 
+  });
 
 export default api;
