@@ -1,7 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = 'http://your-api-domain.com/api/v1'; // 替换为实际API地址
+const BASE_URL = 'http://101.126.19.34:3000/api/v1'; // 后端API地址
 
 const api = axios.create({
   baseURL: BASE_URL,
