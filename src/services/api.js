@@ -1,7 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = 'http://101.126.19.34:3000/api/v1'; // 后端API地址
+const BASE_URL = 'https://qiujia-backend-production-daa4.up.railway.app/api/v1'; // Railway后端API
 
 const api = axios.create({
   baseURL: BASE_URL,

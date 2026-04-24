@@ -33,9 +33,15 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      await sendCode(phone);
+      const response = await sendCode(phone);
       setStep(2);
       setCountdown(60);
+      
+      // 开发模式：显示验证码
+      if (response.data?.debug_code) {
+        Alert.alert('验证码', `验证码是: ${response.data.debug_code}`);
+        setCode(response.data.debug_code);
+      }
       
       // 倒计时
       const timer = setInterval(() => {
